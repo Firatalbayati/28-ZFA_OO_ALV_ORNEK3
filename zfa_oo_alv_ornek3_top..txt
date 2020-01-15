@@ -1,0 +1,23 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZFA_OO_ALV_ORNEK3_TOP
+*&---------------------------------------------------------------------*
+CLASS : lcl_event_handler DEFINITION DEFERRED.  "TANIMLANMA TANIMLANMIŞ "ilerde bu sınıfa gelmeden bu sınıfın değişkeni tanımlanmış olabilir
+" varsa değişkeni kompayn et
+
+*CLASS : cl_gui_custom_container DEFINITION DEFERRED ,
+*        cl_gui_easy_splitter_container DEFINITION DEFERRED.
+
+
+DATA : go_custom_container   TYPE REF TO cl_gui_custom_container,
+       go_splitter_container TYPE REF TO cl_gui_easy_splitter_container,
+       go_sflight_alv        TYPE REF TO cl_gui_alv_grid, "birinci alv'yi tanımladık
+       go_sbook_alv          TYPE REF TO cl_gui_alv_grid, "ikinci alv'yi tanımladık
+       ok_code               TYPE        sy-ucomm,
+       gt_sflight            TYPE TABLE OF sflight,
+       gt_sbook              TYPE TABLE OF sbook,
+       go_event_handler      TYPE REF TO lcl_event_handler,
+       go_dialogbox_cont     TYPE REF TO cl_gui_dialogbox_container, " açılan popup alv
+       go_sbook_alv2         TYPE REF TO cl_gui_alv_grid, " açılan popup alv
+       gt_sbook2             TYPE TABLE OF sbook, " açılan popup alvının tablo değişkeni
+       gt_sbook_buffer       TYPE TABLE OF sbook. " bunu kontrol için yaratık eğer içinde önceden select edilen veriler varsa çalıştırız
+                                                  " performans açısından çok önemli

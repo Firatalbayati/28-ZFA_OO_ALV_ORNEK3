@@ -1,0 +1,256 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZFA_OO_ALV_ORNEK3_CLSS
+*&---------------------------------------------------------------------*
+
+CLASS lcl_event_handler DEFINITION.
+  PUBLIC SECTION.
+    METHODS : handle_double_click                  " eventleri görmek için > se24 > cl_gui_alv_grid > event
+         FOR EVENT double_click OF cl_gui_alv_grid
+          IMPORTING e_row.
+
+    METHODS: handle_toolbar
+              FOR EVENT toolbar OF cl_gui_alv_grid
+              IMPORTING e_object.
+
+    METHODS: handle_user_command
+             FOR EVENT user_command OF cl_gui_alv_grid
+             IMPORTING e_ucomm.
+
+    METHODS: handle_close
+             FOR EVENT close OF cl_gui_dialogbox_container.
+
+ENDCLASS.
+
+
+
+CLASS lcl_event_handler IMPLEMENTATION.
+
+  METHOD : handle_double_click.
+    DATA : ls_sflight TYPE sflight. " ls  locak stracture
+
+    READ TABLE gt_sflight
+              INTO ls_sflight
+              INDEX e_row.
+    IF sy-subrc IS INITIAL.
+
+      SELECT * FROM sbook
+         INTO TABLE gt_sbook
+           WHERE carrid = ls_sflight-carrid
+           AND   connid = ls_sflight-connid
+           AND   fldate = ls_sflight-fldate.
+
+      "go_sbook_alv
+      "cl_gui_alv_grid
+      "refresh_table_display
+      CALL METHOD go_sbook_alv->refresh_table_display. " alvye refresh etmek için
+    ELSE.
+      RETURN.
+    ENDIF.
+  ENDMETHOD.
+
+
+  "sflight alvesinde görülmesi için set etmemiz lazım
+  METHOD handle_toolbar. "toolbara button eklemek için
+    DATA: ls_button TYPE stb_button. "her buttonı stb olan bir internal tablo
+    ls_button-butn_type = 3.
+    APPEND ls_button TO e_object->mt_toolbar. "olması gerke
+    CLEAR ls_button.
+
+    ls_button-function = 'sbook_goster'.  " Dikkat boşluk ve türkçe karakter olamaz
+    ls_button-quickinfo = 'Rezervasyonları Göster'.
+    ls_button-butn_type = 0.  "üzerine çift tıklayarak domain içine value kısmında button çeşitlerini görebiliriz
+    ls_button-text = 'Rezervasyonlar'.
+    APPEND ls_button TO e_object->mt_toolbar. "olması gerke
+  ENDMETHOD.
+
+  METHOD handle_user_command.
+    DATA: lv_satir        TYPE i,
+          ls_sflight      TYPE sflight,
+          ls_sbook_buffer TYPE sbook.
+
+    CASE e_ucomm.
+      WHEN 'sbook_goster'. " Dikkat boşluk ve türkçe karakter olamaz
+        " go_sflight_alv
+        " cl_gui_alv_grid
+        " get_current_cell
+        CALL METHOD go_sflight_alv->get_current_cell " satır yakalamak için
+          IMPORTING
+            e_row = lv_satir.
+
+        cl_gui_cfw=>flush( ).
+
+        READ TABLE gt_sflight
+         INTO ls_sflight
+         INDEX lv_satir.
+
+        IF sy-subrc IS INITIAL.
+*
+*          CALL FUNCTION 'POPUP_TO_INFORM'
+*            EXPORTING
+*              titel = 'Ucuş bilgileri'
+*              txt1  = ls_sflight-carrid
+*              txt2  = ls_sflight-connid
+*              txt3  = ls_sflight-fldate
+**             TXT4  = ' '
+*            .
+
+          IF go_dialogbox_cont IS  INITIAL .
+
+            CREATE OBJECT go_dialogbox_cont
+              EXPORTING
+*               parent =
+                width  = 1000
+                height = 200
+*               style  =
+                top    = 60
+                left   = 150.
+            IF sy-subrc <> 0.
+*   MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*              WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+            ENDIF.
+
+            SET HANDLER go_event_handler->handle_close
+                 FOR go_dialogbox_cont.
+
+            " go_sbook_alv2
+            " cl_gui_alv_grid
+            CREATE OBJECT go_sbook_alv2   " açılan alv
+              EXPORTING
+*               i_shellstyle      = 0
+*               i_lifetime        =
+                i_parent = go_dialogbox_cont
+*               i_appl_events     = space
+*               i_parentdbg       =
+*               i_applogparent    =
+*               i_graphicsparent  =
+*               i_name   =
+*               i_fcat_complete   = SPACE
+*  EXCEPTIONS
+*               error_cntl_create = 1
+*               error_cntl_init   = 2
+*               error_cntl_link   = 3
+*               error_dp_create   = 4
+*               others   = 5
+              .
+            IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+            ENDIF.
+*******************************************************************************
+            CLEAR gt_sbook2.
+            READ TABLE gt_sbook_buffer INTO ls_sbook_buffer    "kontrol amaçlı oluşturduk performansı artırmak için
+                       WITH KEY  carrid = ls_sflight-carrid
+                                  connid = ls_sflight-connid
+                                  fldate = ls_sflight-fldate.
+
+            IF sy-subrc IS INITIAL.
+              LOOP AT gt_sbook_buffer INTO ls_sbook_buffer
+                             WHERE carrid = ls_sflight-carrid
+                            AND   connid = ls_sflight-connid
+                            AND   fldate = ls_sflight-fldate.
+                APPEND ls_sbook_buffer TO gt_sbook2.
+
+              ENDLOOP.
+            ELSE.
+*****************************************************************************
+              SELECT * FROM sbook INTO TABLE gt_sbook2
+                          WHERE carrid = ls_sflight-carrid
+                         AND   connid = ls_sflight-connid
+                         AND   fldate = ls_sflight-fldate.
+
+              APPEND LINES OF gt_sbook2 TO gt_sbook_buffer.
+            ENDIF.
+            " go_sbook_alv2
+            " cl_gui_grid_alv
+            " set_table_for_first_display
+            CALL METHOD go_sbook_alv2->set_table_for_first_display  " açılan alv
+              EXPORTING
+*               i_buffer_active  =
+*               i_bypassing_buffer            =
+*               i_consistency_check           =
+                i_structure_name = 'SBOOK'
+*               is_variant       =
+*               i_save           =
+*               i_default        = 'X'
+*               is_layout        =
+*               is_print         =
+*               it_special_groups             =
+*               it_toolbar_excluding          =
+*               it_hyperlink     =
+*               it_alv_graphics  =
+*               it_except_qinfo  =
+*               ir_salv_adapter  =
+              CHANGING
+                it_outtab        = gt_sbook2
+*               it_fieldcatalog  =
+*               it_sort          =
+*               it_filter        =
+*  EXCEPTIONS
+*               invalid_parameter_combination = 1
+*               program_error    = 2
+*               too_many_lines   = 3
+*               others           = 4
+              .
+            IF sy-subrc <> 0.
+* Implement suitable error handling here
+            ENDIF.
+
+********************************************************************************
+          ELSE. " burdan sonra eğer popup alvye tekrar açmak istersek eğer kapalı ise burası çalışır
+
+            CALL METHOD go_sflight_alv->get_current_cell " satır yakalamak için
+              IMPORTING
+                e_row = lv_satir.
+
+            cl_gui_cfw=>flush( ).
+
+            READ TABLE gt_sflight
+             INTO ls_sflight
+             INDEX lv_satir.
+
+            SELECT * FROM sbook INTO TABLE gt_sbook2
+                        WHERE carrid = ls_sflight-carrid
+                       AND   connid = ls_sflight-connid
+                       AND   fldate = ls_sflight-fldate.
+
+            go_sbook_alv2->refresh_table_display( ).
+
+            CALL METHOD go_dialogbox_cont->set_visible
+              EXPORTING
+                visible = '1'
+*             EXCEPTIONS
+*               cntl_error        = 1
+*               cntl_system_error = 2
+*               others  = 3
+              .
+            IF sy-subrc <> 0.
+*            Implement suitable error handling here
+            ENDIF.
+
+****************************************************************************
+          ENDIF.
+        ENDIF.
+    ENDCASE.
+  ENDMETHOD.
+
+  METHOD : handle_close.
+
+    " go_dialogbox_cont
+    " cl_gui-dialogbox_container
+    " set_visible
+    CALL METHOD go_dialogbox_cont->set_visible  "açılan popupı görülmez yapmak için (kapanmaz görülmez olur)
+      EXPORTING
+        visible = '0'
+*  EXCEPTIONS
+*       cntl_error        = 1
+*       cntl_system_error = 2
+*       others  = 3
+      .
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+    ENDIF.
+
+
+  ENDMETHOD.
+
+ENDCLASS.

@@ -1,0 +1,198 @@
+*----------------------------------------------------------------------*
+***INCLUDE ZFA_OO_ALV_ORNEK3_KONTROLLEF01.
+*----------------------------------------------------------------------*
+
+FORM kontrolleri_olustur .
+
+  IF go_custom_container IS INITIAL.
+
+    CREATE OBJECT go_custom_container  " container nesnesini olusturduk , birinci ve ikinci alvnin alani.
+      EXPORTING
+        container_name = 'ALV_AREA1'.
+
+    CREATE OBJECT go_splitter_container
+      EXPORTING
+*       link_dynnr    =
+*       link_repid    =
+*       metric        = cntl_metric_dynpro
+        parent        = go_custom_container
+*       orientation   = 0                       " 0 dik 1 yatay
+        sash_position = 50                      "2 alveyi ayırma çisgisi
+*       with_border   = 1
+*       name          =
+*  EXCEPTIONS
+*       cntl_error    = 1
+*       cntl_system_error = 2
+*       others        = 3
+      .
+    IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ENDIF.
+
+
+    PERFORM sflight_alv_olustur."birinci alv
+    PERFORM sbook_alv_olustur. "ikinci alv
+
+
+  ENDIF.
+ENDFORM.                    " KONTROLLERI_OLUSTUR
+
+
+"birinci alv
+FORM sflight_alv_olustur .
+
+  CREATE OBJECT go_sflight_alv                    " creat object
+    EXPORTING                                     " go_sflight_alv
+*     i_shellstyle      = 0                       " cl_guı_alv_grıd
+*     i_lifetime        =
+      i_parent = go_splitter_container->top_left_container.  "kontainerin sol üstünde
+*    i_appl_events     = space
+*    i_parentdbg       =
+*    i_applogparent    =
+*    i_graphicsparent  =
+*    i_name            =
+*    i_fcat_complete   = SPACE
+*  EXCEPTIONS
+*    error_cntl_create = 1
+*    error_cntl_init   = 2
+*    error_cntl_link   = 3
+*    error_dp_create   = 4
+*    others            = 5
+  .
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+  CREATE OBJECT go_event_handler.
+  SET HANDLER go_event_handler->handle_double_click   "double_click'ı set ettik
+     FOR go_sflight_alv.
+
+  SET HANDLER go_event_handler->handle_toolbar   " toolbar'ı set ettik
+     FOR go_sflight_alv.
+
+  SET HANDLER go_event_handler->handle_user_command
+                   FOR go_sflight_alv.
+
+  SELECT * FROM sflight INTO TABLE gt_sflight
+     UP TO 200 ROWS.
+
+
+  CALL METHOD go_sflight_alv->set_table_for_first_display   "  CALL METHOD
+    EXPORTING                                               " go_sflight_alv
+*     i_buffer_active  =                                    " cl_gui_alv_grid
+*     i_bypassing_buffer            =                       " set_table_for_first_display
+*     i_consistency_check           =
+      i_structure_name = 'SFLIGHT'
+*     is_variant       =
+*     i_save           =
+*     i_default        = 'X'
+*     is_layout        =
+*     is_print         =
+*     it_special_groups             =
+*     it_toolbar_excluding          =
+*     it_hyperlink     =
+*     it_alv_graphics  =
+*     it_except_qinfo  =
+*     ir_salv_adapter  =
+    CHANGING
+      it_outtab        = gt_sflight
+*     it_fieldcatalog  =
+*     it_sort          =
+*     it_filter        =
+*      EXCEPTIONS
+*     invalid_parameter_combination = 1
+*     program_error    = 2
+*     too_many_lines   = 3
+*     others           = 4
+    .
+  IF sy-subrc <> 0.
+*     Implement suitable error handling here
+  ENDIF.
+
+
+  " go_sflight_alv
+  " cl_gui_alv_grid
+  " set_toolbar_interactive
+  CALL METHOD go_sflight_alv->set_toolbar_interactive. " buttonun görülmesi için methodu çağrdık
+
+ENDFORM.                    " SFLIGHT_ALV_OLUSTUR
+
+
+
+
+
+"ikinci alv
+FORM sbook_alv_olustur .
+
+  DATA : ls_sflight TYPE sflight.
+
+  CREATE OBJECT go_sbook_alv                   " creat object
+    EXPORTING                                  " go_sflight_alv
+*     i_shellstyle      = 0                    " cl_guı_alv_grıd
+*     i_lifetime        =
+      i_parent = go_splitter_container->bottom_right_container.  " kontainerin sağ altinda
+*    i_appl_events     = space
+*    i_parentdbg       =
+*    i_applogparent    =
+*    i_graphicsparent  =
+*    i_name            =
+*    i_fcat_complete   = SPACE
+*  EXCEPTIONS
+*    error_cntl_create = 1
+*    error_cntl_init   = 2
+*    error_cntl_link   = 3
+*    error_dp_create   = 4
+*    others            = 5
+  .
+  IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+
+
+  READ TABLE gt_sflight INTO ls_sflight INDEX 10 . " ilk başta 10.satırı seçip 2.alveyi 10.satra göre gösteriyour
+
+  IF sy-subrc IS INITIAL.
+
+    SELECT * FROM sbook INTO TABLE gt_sbook
+             WHERE carrid = ls_sflight-carrid
+             AND   connid = ls_sflight-connid
+             AND   fldate = ls_sflight-fldate.
+
+  ENDIF.
+
+  CALL METHOD go_sbook_alv->set_table_for_first_display         " call method
+    EXPORTING                                                   " go_sbook_alv
+*     i_buffer_active  =                                        " cl_gui_alv_grid
+*     i_bypassing_buffer            =                           " set_table_for_first_display
+*     i_consistency_check           =
+      i_structure_name = 'SBOOK'
+*     is_variant       =
+*     i_save           =
+*     i_default        = 'X'
+*     is_layout        =
+*     is_print         =
+*     it_special_groups             =
+*     it_toolbar_excluding          =
+*     it_hyperlink     =
+*     it_alv_graphics  =
+*     it_except_qinfo  =
+*     ir_salv_adapter  =
+    CHANGING
+      it_outtab        = gt_sbook
+*     it_fieldcatalog  =
+*     it_sort          =
+*     it_filter        =
+*    EXCEPTIONS
+*     invalid_parameter_combination = 1
+*     program_error    = 2
+*     too_many_lines   = 3
+*     others           = 4
+    .
+  IF sy-subrc <> 0.
+*   Implement suitable error handling here
+  ENDIF.
+
+ENDFORM.                    " SBOOK_ALV_OLUSTUR
